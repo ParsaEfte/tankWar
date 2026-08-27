@@ -20,7 +20,7 @@ public class MazeBuilder {
     public static final float MODEL_SCALE = 1.5f;
 
     private static final String[][] MAZE_MAP = {
-            {"L0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "L1"},
+            {"W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0", "W0"},
             {"W3", "E0", "W0", "L0", "W0", "T0", "W0", "L1", "W0", "E1", "W1"},
             {"W3", "C0", "W3", "C0", "W3", "C0", "W1", "C0", "W1", "C0", "W1"},
             {"W3", "T3", "W2", "X0", "W0", "T1", "W2", "X0", "W0", "T1", "W1"},
@@ -30,7 +30,7 @@ public class MazeBuilder {
             {"W3", "T3", "W2", "X0", "W2", "T1", "W0", "X0", "W2", "T1", "W1"},
             {"W3", "C0", "W3", "C0", "W3", "C0", "W1", "C0", "W1", "C0", "W1"},
             {"W3", "E3", "W2", "L3", "W2", "T2", "W2", "L2", "W2", "E2", "W1"},
-            {"L3", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "L2"}
+            {"W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2", "W2"}
     };
 
     private final AssetManager assetManager;
@@ -88,6 +88,7 @@ public class MazeBuilder {
     public void build() {
         buildCeiling();
         buildMazeGrid();
+        buildPerimeterBoundary(); // دیوارکشی کامل محیط بیرونی
     }
 
     private void buildMazeGrid() {
@@ -110,6 +111,32 @@ public class MazeBuilder {
                 spawnFloor(pos);
                 spawnPiece(type, pos, rotY);
             }
+        }
+    }
+
+    // ایجاد یک حصار نفوذناپذیر در ۴ ضلع بیرونی بدون کوچک‌ترین درز
+    private void buildPerimeterBoundary() {
+        int rows = MAZE_MAP.length;
+        int cols = MAZE_MAP[0].length;
+        float offsetX = (cols * TILE_SIZE) / 2.0f;
+        float offsetZ = (rows * TILE_SIZE) / 2.0f;
+
+        // ۱. ضلع بالا و پایین
+        for (int c = 0; c < cols; c++) {
+            float x = (c * TILE_SIZE) - offsetX;
+            // ضلع بالا (رو به داخل)
+            spawnPiece('W', new Vector3f(x, 0, -offsetZ), FastMath.PI);
+            // ضلع پایین (رو به داخل)
+            spawnPiece('W', new Vector3f(x, 0, ((rows - 1) * TILE_SIZE) - offsetZ), 0f);
+        }
+
+        // ۲. ضلع چپ و راست
+        for (int r = 0; r < rows; r++) {
+            float z = (r * TILE_SIZE) - offsetZ;
+            // ضلع چپ (رو به داخل)
+            spawnPiece('W', new Vector3f(-offsetX, 0, z), -FastMath.HALF_PI);
+            // ضلع راست (رو به داخل)
+            spawnPiece('W', new Vector3f(((cols - 1) * TILE_SIZE) - offsetX, 0, z), FastMath.HALF_PI);
         }
     }
 

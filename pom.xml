@@ -46,7 +46,7 @@
             <artifactId>jme3-plugins</artifactId>
             <version>${jme3.version}</version>
         </dependency>
-        <!-- Effects & Post-Processing (Bloom, Shadows, etc.) -->
+        <!-- Effects & Post-Processing -->
         <dependency>
             <groupId>org.jmonkeyengine</groupId>
             <artifactId>jme3-effects</artifactId>
@@ -56,6 +56,7 @@
 
     <build>
         <plugins>
+            <!-- ۱. بسته‌بندی Fat-JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -67,6 +68,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.example.core.Launcher</mainClass>
@@ -82,6 +84,134 @@
                                     </excludes>
                                 </filter>
                             </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ۲. ساخت EXE ویندوز با اشاره به پوشه JRE امبد شده -->
+            <plugin>
+                <groupId>com.akathist.maven.plugins.launch4j</groupId>
+                <artifactId>launch4j-maven-plugin</artifactId>
+                <version>2.4.1</version>
+                <executions>
+                    <execution>
+                        <id>build-exe</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>launch4j</goal>
+                        </goals>
+                        <configuration>
+                            <headerType>gui</headerType>
+                            <jar>${project.build.directory}/${project.artifactId}-${project.version}.jar</jar>
+                            <outfile>${project.build.directory}/CyberCastle.exe</outfile>
+                            <classPath>
+                                <mainClass>org.example.core.Launcher</mainClass>
+                                <preCp>anything</preCp>
+                            </classPath>
+                            <jre>
+                                <path>./jre</path>
+                                <bundledJre64Bit>true</bundledJre64Bit>
+                                <minVersion>21</minVersion>
+                                <jdkPreference>preferJre</jdkPreference>
+                                <opts>
+                                    <opt>--enable-native-access=ALL-UNNAMED</opt>
+                                    <opt>--sun-misc-unsafe-memory-access=allow</opt>
+                                </opts>
+                            </jre>
+                            <versionInfo>
+                                <fileVersion>1.0.0.0</fileVersion>
+                                <txtFileVersion>1.0.0.0</txtFileVersion>
+                                <fileDescription>Cyber Castle 3D Tank Battle</fileDescription>
+                                <copyright>2026</copyright>
+                                <productVersion>1.0.0.0</productVersion>
+                                <txtProductVersion>1.0.0.0</txtProductVersion>
+                                <productName>Cyber Castle</productName>
+                                <internalName>CyberCastle</internalName>
+                                <originalFilename>CyberCastle.exe</originalFilename>
+                            </versionInfo>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ۳. تولید پکیج DMG با jpackage و ساخت ساختار خروجی dist -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <id>build-dmg</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>jpackage</executable>
+                            <arguments>
+                                <argument>--type</argument>
+                                <argument>dmg</argument>
+                                <argument>--name</argument>
+                                <argument>CyberCastle</argument>
+                                <argument>--input</argument>
+                                <argument>${project.build.directory}</argument>
+                                <argument>--main-jar</argument>
+                                <argument>${project.artifactId}-${project.version}.jar</argument>
+                                <argument>--main-class</argument>
+                                <argument>org.example.core.Launcher</argument>
+                                <argument>--dest</argument>
+                                <argument>${project.build.directory}/dmg-out</argument>
+                                <argument>--java-options</argument>
+                                <argument>-XstartOnFirstThread</argument>
+                                <argument>--java-options</argument>
+                                <argument>--enable-native-access=ALL-UNNAMED</argument>
+                                <argument>--java-options</argument>
+                                <argument>--sun-misc-unsafe-memory-access=allow</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ۴. مونتاژ نهایی پوشه dist/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${project.basedir}/dist"/>
+                                <mkdir dir="${project.basedir}/dist/windows"/>
+                                <mkdir dir="${project.basedir}/dist/linux"/>
+                                <mkdir dir="${project.basedir}/dist/macos"/>
+
+                                <!-- ۱. خروجی مک: فقط فایل DMG نصاب بدون اسکریپت -->
+                                <copy todir="${project.basedir}/dist/macos">
+                                    <fileset dir="${project.build.directory}/dmg-out">
+                                        <include name="*.dmg"/>
+                                    </fileset>
+                                </copy>
+
+                                <!-- ۲. خروجی ویندوز: فایل EXE باندل شده و فایل JAR در کنار پوشه jre -->
+                                <copy file="${project.build.directory}/CyberCastle.exe" todir="${project.basedir}/dist/windows"/>
+                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar" tofile="${project.basedir}/dist/windows/CyberCastle.jar"/>
+                                <mkdir dir="${project.basedir}/dist/windows/jre"/>
+
+                                <!-- ۳. خروجی لینوکس: اسکریپت و JAR -->
+                                <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar" tofile="${project.basedir}/dist/linux/game.jar"/>
+                                <echo file="${project.basedir}/dist/linux/run-linux.sh">#!/usr/bin/env bash
+                                    DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
+                                    java --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow -jar "$DIR/game.jar"
+                                </echo>
+                                <chmod file="${project.basedir}/dist/linux/run-linux.sh" perm="755"/>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>

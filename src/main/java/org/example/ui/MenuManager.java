@@ -1,4 +1,4 @@
-package org.example.menu;
+package org.example.ui;
 
 import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapFont;
