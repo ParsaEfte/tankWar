@@ -56,7 +56,6 @@
 
     <build>
         <plugins>
-            <!-- ۱. بسته‌بندی Fat-JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -89,7 +88,6 @@
                 </executions>
             </plugin>
 
-            <!-- ۲. ساخت EXE ویندوز با اشاره به پوشه JRE امبد شده -->
             <plugin>
                 <groupId>com.akathist.maven.plugins.launch4j</groupId>
                 <artifactId>launch4j-maven-plugin</artifactId>
@@ -135,7 +133,6 @@
                 </executions>
             </plugin>
 
-            <!-- ۳. تولید پکیج DMG با jpackage و ساخت ساختار خروجی dist -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -174,7 +171,6 @@
                 </executions>
             </plugin>
 
-            <!-- ۴. مونتاژ نهایی پوشه dist/ -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
@@ -187,24 +183,28 @@
                         </goals>
                         <configuration>
                             <target>
-                                <delete dir="${project.basedir}/dist"/>
+                                <delete dir="${project.basedir}/dist/linux" failonerror="false"/>
+                                <delete dir="${project.basedir}/dist/macos" failonerror="false"/>
+
+                                <delete failonerror="false">
+                                    <fileset dir="${project.basedir}/dist/windows" erroronmissingdir="false">
+                                        <include name="*"/>
+                                    </fileset>
+                                </delete>
+
                                 <mkdir dir="${project.basedir}/dist/windows"/>
                                 <mkdir dir="${project.basedir}/dist/linux"/>
                                 <mkdir dir="${project.basedir}/dist/macos"/>
 
-                                <!-- ۱. خروجی مک: فقط فایل DMG نصاب بدون اسکریپت -->
                                 <copy todir="${project.basedir}/dist/macos">
                                     <fileset dir="${project.build.directory}/dmg-out">
                                         <include name="*.dmg"/>
                                     </fileset>
                                 </copy>
 
-                                <!-- ۲. خروجی ویندوز: فایل EXE باندل شده و فایل JAR در کنار پوشه jre -->
                                 <copy file="${project.build.directory}/CyberCastle.exe" todir="${project.basedir}/dist/windows"/>
                                 <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar" tofile="${project.basedir}/dist/windows/CyberCastle.jar"/>
-                                <mkdir dir="${project.basedir}/dist/windows/jre"/>
 
-                                <!-- ۳. خروجی لینوکس: اسکریپت و JAR -->
                                 <copy file="${project.build.directory}/${project.artifactId}-${project.version}.jar" tofile="${project.basedir}/dist/linux/game.jar"/>
                                 <echo file="${project.basedir}/dist/linux/run-linux.sh">#!/usr/bin/env bash
                                     DIR="$(cd "$(dirname "$0")" &amp;&amp; pwd)"
